@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>CHRONOS-45 // Temporal Work Unit</title>
+<style>
+  :root{
+    --bg:#07111a;
+    --bg2:#0b1822;
+    --panel:#101a22;
+    --panel2:#141f28;
+    --ink:#e7dfcf;
+    --muted:#8f9aa3;
+    --amber:#ffb11a;
+    --amber-dim:#654910;
+    --line:rgba(255,177,26,.16);
+    --line2:rgba(255,255,255,.05);
+    --shadow:rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:
+    radial-gradient(circle at 50% 28%, rgba(255,177,26,.055), transparent 26%),
+    radial-gradient(circle at 20% 20%, rgba(90,130,160,.06), transparent 28%),
+    linear-gradient(180deg,var(--bg),var(--bg2) 58%,#071018);
+    color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  body{overflow-x:hidden}
+  .page{min-height:100vh;position:relative;display:flex;align-items:center;justify-content:center;padding:26px 18px 34px}
+  .starfield,.orbits,.timeline{position:fixed;inset:0;pointer-events:none}
+  .starfield{opacity:.42;background-image:
+    radial-gradient(circle,#fff 0 1px,transparent 1.1px),
+    radial-gradient(circle,#d7b96a 0 1px,transparent 1.1px);
+    background-size:73px 73px,113px 113px;
+    background-position:11px 27px,39px 13px}
+  .orbits::before,.orbits::after{
+    content:"";position:absolute;border:1px solid var(--line);border-radius:50%;
+    left:50%;top:50%;transform:translate(-50%,-50%)
+  }
+  .orbits::before{width:min(84vw,820px);height:min(84vw,820px)}
+  .orbits::after{width:min(66vw,620px);height:min(66vw,620px)}
+  .timeline{
+    background:
+      linear-gradient(90deg,transparent 0 10%,var(--line2) 10.1% 10.2%,transparent 10.3% 89.7%,var(--line2) 89.8% 89.9%,transparent 90%),
+      linear-gradient(180deg,transparent 0 15%,var(--line2) 15.1% 15.2%,transparent 15.3% 84.7%,var(--line2) 84.8% 84.9%,transparent 85%);
+  }
+  .timeline svg{width:100%;height:100%}
+  .wrap{position:relative;width:min(100%,520px);display:flex;flex-direction:column;align-items:center;gap:14px}
+  .eyebrow{font-size:11px;letter-spacing:.24em;color:#b7aa8f;text-align:center}
+  .title{font-size:clamp(30px,8vw,54px);letter-spacing:.18em;margin-left:.18em;font-weight:800;text-align:center}
+  .subtitle{font-size:11px;letter-spacing:.2em;color:var(--muted);text-align:center}
+  .instrument{
+    width:min(100%,420px);
+    background:linear-gradient(180deg,rgba(18,29,38,.94),rgba(10,18,25,.94));
+    border:1px solid rgba(255,177,26,.18);
+    box-shadow:0 24px 80px var(--shadow), inset 0 0 0 1px rgba(255,255,255,.025);
+    border-radius:24px;
+    padding:18px 18px 16px;
+    position:relative;
+    backdrop-filter:blur(8px)
+  }
+  .instrument::before,.instrument::after{
+    content:"";position:absolute;width:26px;height:26px;border-color:rgba(255,177,26,.35)
+  }
+  .instrument::before{left:10px;top:10px;border-left:1px solid;border-top:1px solid}
+  .instrument::after{right:10px;bottom:10px;border-right:1px solid;border-bottom:1px solid}
+  .statusbar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;font-size:9px;letter-spacing:.14em;color:#9aa3ab}
+  .statusbar div{padding:8px 9px;border:1px solid rgba(255,255,255,.055);background:rgba(255,255,255,.018)}
+  .statusbar b{display:block;color:#d0c4ad;font-weight:600;margin-top:4px}
+  .glassWrap{display:flex;justify-content:center;align-items:center;padding:4px 0 2px}
+  svg.hourglass{width:min(78vw,300px);height:auto;filter:drop-shadow(0 0 18px rgba(255,177,26,.08))}
+  .shell{fill:#13171a;stroke:#30383f;stroke-width:3}
+  .px{fill:#4a4338;stroke:#121212;stroke-width:1.2}
+  .px.on{fill:var(--amber);filter:drop-shadow(0 0 3px rgba(255,177,26,.72))}
+  .grain{fill:var(--amber);opacity:0;filter:drop-shadow(0 0 4px rgba(255,177,26,.8))}
+  .grain.on{opacity:1}
+  .clock{font-size:clamp(48px,16vw,78px);font-weight:850;letter-spacing:.05em;font-variant-numeric:tabular-nums;text-align:center;line-height:1;color:#f2e8d4;text-shadow:0 0 24px rgba(255,177,26,.10)}
+  .mode{margin-top:8px;text-align:center;font-size:10px;letter-spacing:.18em;color:#a89c86;min-height:1.2em}
+  .controls{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+  button{
+    appearance:none;border:1px solid rgba(255,255,255,.09);background:#151e25;color:#e7dfcf;
+    min-height:46px;padding:0 20px;border-radius:10px;font-family:inherit;font-weight:800;letter-spacing:.08em;
+    cursor:pointer;box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)
+  }
+  button.primary{border-color:rgba(255,177,26,.55);background:linear-gradient(180deg,#5a400b,#352707);color:#ffd56c}
+  button:active{transform:translateY(1px)}
+  .footer{display:flex;justify-content:space-between;gap:10px;margin-top:16px;font-size:8px;letter-spacing:.13em;color:#66717a}
+  .quote{margin-top:2px;text-align:center;font-size:10px;line-height:1.5;color:#9d9486;max-width:430px}
+  @media(max-width:420px){
+    .page{padding:18px 12px 26px}
+    .instrument{padding:14px 12px}
+    .statusbar{grid-template-columns:1fr}
+    .footer{flex-direction:column;align-items:center}
+  }
+</style>
+</head>
+<body>
+<div class="starfield"></div>
+<div class="orbits"></div>
+<div class="timeline">
+<svg viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+  <path d="M80 890 C250 700, 300 570, 500 500 S740 270, 920 120" fill="none" stroke="rgba(255,177,26,.10)" stroke-width="1.2"/>
+  <path d="M40 140 C220 260, 280 400, 500 500 S750 710, 960 860" fill="none" stroke="rgba(255,177,26,.07)" stroke-width="1"/>
+  <path d="M140 40 C260 250, 360 360, 500 500 S720 680, 820 960" fill="none" stroke="rgba(120,155,180,.07)" stroke-width="1"/>
+  <circle cx="500" cy="500" r="5" fill="rgba(255,177,26,.35)"/>
+  <circle cx="288" cy="632" r="3" fill="rgba(255,177,26,.22)"/>
+  <circle cx="719" cy="321" r="3" fill="rgba(255,177,26,.22)"/>
+</svg>
+</div>
+
+<main class="page">
+  <section class="wrap">
+    <div class="eyebrow">STARWOLF LABS // TEMPORAL MECHANICS DIVISION</div>
+    <div class="title">CHRONOS-45</div>
+    <div class="subtitle">TEMPORAL WORK UNIT // CONTROLLED INTERVAL ENGINE</div>
+
+    <div class="instrument">
+      <div class="statusbar">
+        <div>LOCAL TIMELINE<b id="timelineState">STABLE</b></div>
+        <div>ENTANGLEMENT<b>NOMINAL</b></div>
+        <div>VARIANCE<b id="variance">00.000</b></div>
+        <div>WORK INTERVAL<b>45 MINUTES</b></div>
+      </div>
+
+      <div class="glassWrap">
+        <svg class="hourglass" viewBox="0 0 300 470" role="img" aria-label="Digital hourglass timer">
+          <path class="shell" d="M48 15 H252 L281 47 V171 L150 229 L19 171 V47 Z"/>
+          <path class="shell" d="M150 241 L281 299 V423 L252 455 H48 L19 423 V299 Z"/>
+          <g id="upper"></g>
+          <g id="lower"></g>
+          <rect id="grain" class="grain" x="144" y="228" width="12" height="14" rx="2"/>
+        </svg>
+      </div>
+
+      <div id="clock" class="clock" aria-live="polite">45:00</div>
+      <div id="mode" class="mode">PRIME TIMELINE READY</div>
+
+      <div class="controls">
+        <button id="startPause" class="primary" type="button">START</button>
+        <button id="reset" type="button">RESET</button>
+      </div>
+
+      <div class="footer">
+        <span>BUILD ::: ASTRA // L0V3</span>
+        <span>DIFFERENT WORLDS // SAME SKY</span>
+      </div>
+    </div>
+
+    <div class="quote">Initiate a controlled temporal branch. Return when the interval converges.</div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const NS='http://www.w3.org/2000/svg';
+  const upperG=document.getElementById('upper');
+  const lowerG=document.getElementById('lower');
+  const clock=document.getElementById('clock');
+  const mode=document.getElementById('mode');
+  const grain=document.getElementById('grain');
+  const startPause=document.getElementById('startPause');
+  const reset=document.getElementById('reset');
+  const variance=document.getElementById('variance');
+  const timelineState=document.getElementById('timelineState');
+
+  const total=45*60;
+  let remaining=total;
+  let running=false;
+  let last=null;
+  let raf=null;
+  const upper=[],lower=[];
+
+  function makeDiamond(group,list,centerY){
+    const rows=9,size=17,gap=4;
+    for(let r=0;r<rows;r++){
+      const count=r<5?r+1:9-r;
+      const y=centerY+r*(size+gap);
+      const width=count*size+(count-1)*gap;
+      const x0=150-width/2;
+      for(let c=0;c<count;c++){
+        const p=document.createElementNS(NS,'rect');
+        p.setAttribute('x',x0+c*(size+gap));
+        p.setAttribute('y',y);
+        p.setAttribute('width',size);
+        p.setAttribute('height',size);
+        p.setAttribute('rx','2');
+        p.setAttribute('class','px');
+        group.appendChild(p);
+        list.push(p);
+      }
+    }
+  }
+
+  makeDiamond(upperG,upper,31);
+  makeDiamond(lowerG,lower,267);
+
+  function render(){
+    const progress=1-(remaining/total);
+    const moved=Math.round(progress*upper.length);
+
+    upper.forEach((p,i)=>p.classList.toggle('on',i < upper.length-moved));
+    lower.forEach((p,i)=>p.classList.toggle('on',i >= lower.length-moved));
+    grain.classList.toggle('on',running&&remaining>0);
+
+    const m=Math.floor(remaining/60);
+    const s=Math.floor(remaining%60);
+    clock.textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+
+    variance.textContent=(progress*0.042).toFixed(3).padStart(6,'0');
+
+    if(remaining<=0){
+      mode.textContent='TIMELINE CONVERGENCE COMPLETE';
+      timelineState.textContent='CONVERGED';
+      startPause.textContent='RESTART';
+    } else if(running){
+      mode.textContent='TEMPORAL SEQUENCE INITIATED';
+      timelineState.textContent='BRANCH ACTIVE';
+      startPause.textContent='PAUSE';
+    } else if(remaining<total){
+      mode.textContent='TEMPORAL BRANCH SUSPENDED';
+      timelineState.textContent='HELD';
+      startPause.textContent='RESUME';
+    } else {
+      mode.textContent='PRIME TIMELINE READY';
+      timelineState.textContent='STABLE';
+      startPause.textContent='START';
+    }
+  }
+
+  function tick(ts){
+    if(!running)return;
+    if(last===null)last=ts;
+    const dt=(ts-last)/1000;
+    last=ts;
+    remaining=Math.max(0,remaining-dt);
+    if(remaining<=0){
+      running=false;
+      last=null;
+    }
+    render();
+    if(running)raf=requestAnimationFrame(tick);
+  }
+
+  startPause.addEventListener('click',()=>{
+    if(remaining<=0) remaining=total;
+    running=!running;
+    last=null;
+    if(raf) cancelAnimationFrame(raf);
+    render();
+    if(running) raf=requestAnimationFrame(tick);
+  });
+
+  reset.addEventListener('click',()=>{
+    running=false;
+    remaining=total;
+    last=null;
+    if(raf) cancelAnimationFrame(raf);
+    mode.textContent='RESTORING PRIME TIMELINE...';
+    timelineState.textContent='RECALIBRATING';
+    render();
+    setTimeout(render,500);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
