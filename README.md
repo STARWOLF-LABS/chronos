@@ -16,3 +16,4 @@ CHRONOS-45 is a 45-minute focus timer styled as a retrofuturist temporal instrum
 This project is designed to run directly from `index.html`.
 
 > DIFFERENT WORLDS // SAME SKY
+
