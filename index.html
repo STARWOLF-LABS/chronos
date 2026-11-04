@@ -183,11 +183,13 @@
         p.setAttribute('height',size);
         p.setAttribute('rx','2');
         p.setAttribute('class','px');
-        group.appendChild(p);
         list.push(p);
       }
     }
     list.sort((a,b)=>Number(a.getAttribute('y'))-Number(b.getAttribute('y')));
+    // Keep the same sand capacity in both chambers, leaving open glass above it.
+    list.splice(0,Math.max(0,list.length-100));
+    list.forEach(p=>group.appendChild(p));
   }
 
   makeChamber(upperG,upper,false);
@@ -232,7 +234,7 @@
     grain.classList.toggle('on',running&&remaining>0);
     // A falling pixel travels from the neck to the current lower sand surface.
     const surface=moved>0?Number(lower[lower.length-moved].getAttribute('y')):439;
-    const fall=(performance.now()%650)/650;
+    const fall=(performance.now()%2400)/2400;
     grain.setAttribute('y',228+fall*Math.max(0,surface-242));
 
     const m=Math.floor(remaining/60);
