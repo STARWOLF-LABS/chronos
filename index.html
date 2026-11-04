@@ -140,7 +140,7 @@
       </div>
 
       <div class="footer">
-        <span>BUILD ::: ASTRA // L0V3</span>
+        <span>BUILD :: BETA V2</span>
         <span>DIFFERENT WORLDS // SAME SKY</span>
       </div>
     </div>
@@ -169,17 +169,16 @@
   let raf=null;
   const upper=[],lower=[];
 
-  function makeDiamond(group,list,centerY){
-    const rows=9,size=17,gap=4;
-    for(let r=0;r<rows;r++){
-      const count=r<5?r+1:9-r;
-      const y=centerY+r*(size+gap);
-      const width=count*size+(count-1)*gap;
-      const x0=150-width/2;
-      for(let c=0;c<count;c++){
+  // Match the inside of the glass, with horizontal layers resting at its base.
+  function makeChamber(group,list,lowerChamber){
+    const size=11,step=14;
+    for(let y=31;y+size<=217;y+=step){
+      for(let x=31;x+size<=269;x+=step){
+        const halfWidth=y<=165?119:119*(223-(y+size))/(223-165);
+        if(Math.max(Math.abs(x-150),Math.abs(x+size-150))>halfWidth)continue;
         const p=document.createElementNS(NS,'rect');
-        p.setAttribute('x',x0+c*(size+gap));
-        p.setAttribute('y',y);
+        p.setAttribute('x',x);
+        p.setAttribute('y',lowerChamber?470-y-size:y);
         p.setAttribute('width',size);
         p.setAttribute('height',size);
         p.setAttribute('rx','2');
@@ -188,18 +187,53 @@
         list.push(p);
       }
     }
+    list.sort((a,b)=>Number(a.getAttribute('y'))-Number(b.getAttribute('y')));
   }
 
-  makeDiamond(upperG,upper,31);
-  makeDiamond(lowerG,lower,267);
+  makeChamber(upperG,upper,false);
+  makeChamber(lowerG,lower,true);
+
+  let audioContext=null;
+  function enableAudio(){
+    try{
+      const Audio=window.AudioContext||window.webkitAudioContext;
+      if(!Audio)return;
+      if(!audioContext)audioContext=new Audio();
+      if(audioContext.state==='suspended')audioContext.resume().catch(()=>{});
+    }catch(error){ /* The visual completion state remains available without audio. */ }
+  }
+
+  function playCompletion(){
+    if(!audioContext||audioContext.state!=='running')return;
+    const now=audioContext.currentTime;
+    [523.25,659.25].forEach((frequency,i)=>{
+      const tone=audioContext.createOscillator();
+      const envelope=audioContext.createGain();
+      const at=now+i*0.45;
+      tone.type='sine';
+      tone.frequency.value=frequency;
+      envelope.gain.setValueAtTime(0,at);
+      envelope.gain.linearRampToValueAtTime(0.10,at+0.035);
+      envelope.gain.exponentialRampToValueAtTime(0.0001,at+1.5);
+      tone.connect(envelope);
+      envelope.connect(audioContext.destination);
+      tone.start(at);
+      tone.stop(at+1.6);
+      tone.onended=()=>{tone.disconnect();envelope.disconnect();};
+    });
+  }
 
   function render(){
     const progress=1-(remaining/total);
     const moved=Math.round(progress*upper.length);
 
-    upper.forEach((p,i)=>p.classList.toggle('on',i < upper.length-moved));
+    upper.forEach((p,i)=>p.classList.toggle('on',i >= moved));
     lower.forEach((p,i)=>p.classList.toggle('on',i >= lower.length-moved));
     grain.classList.toggle('on',running&&remaining>0);
+    // A falling pixel travels from the neck to the current lower sand surface.
+    const surface=moved>0?Number(lower[lower.length-moved].getAttribute('y')):439;
+    const fall=(performance.now()%650)/650;
+    grain.setAttribute('y',228+fall*Math.max(0,surface-242));
 
     const m=Math.floor(remaining/60);
     const s=Math.floor(remaining%60);
@@ -235,15 +269,17 @@
     if(remaining<=0){
       running=false;
       last=null;
+      playCompletion();
     }
     render();
     if(running)raf=requestAnimationFrame(tick);
   }
 
   startPause.addEventListener('click',()=>{
+    enableAudio();
     if(remaining<=0) remaining=total;
     running=!running;
-    last=null;
+    last=running?performance.now():null;
     if(raf) cancelAnimationFrame(raf);
     render();
     if(running) raf=requestAnimationFrame(tick);
